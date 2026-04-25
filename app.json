@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "goodisplay_nfc_test",
-    "slug": "goodisplay_nfc_test",
+    "name": "GoodDisplay NFC",
+    "slug": "gooddisplay-nfc-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,7 +9,20 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.stidget.gooddisplaynfc",
+      "infoPlist": {
+        "NFCReaderUsageDescription": "This app uses NFC to communicate with and update GoodDisplay e-paper price tags."
+      },
+      "entitlements": {
+        "com.apple.developer.nfc.readersession.formats": ["TAG"],
+        "com.apple.developer.nfc.readersession.iso7816.select-identifiers": [
+          "D276000085010100"
+        ]
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,8 +31,17 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "package": "com.stidget.gooddisplaynfc",
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["android.permission.NFC"],
+      "intentFilters": [
+        {
+          "action": "android.nfc.action.TECH_DISCOVERED",
+          "data": [],
+          "category": []
+        }
+      ]
     },
     "web": {
       "output": "static",
@@ -27,6 +49,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "react-native-nfc-manager",
+        {
+          "nfcPermission": "Allow GoodDisplay NFC to interact with nearby e-paper display tags",
+          "selectIdentifiers": ["D276000085010100"],
+          "includeNdefEntitlement": true
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -37,6 +67,25 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 31,
+            "targetSdkVersion": 36
+          },
+          "ios": {
+            "deploymentTarget": "16.0"
+          }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow GoodDisplay NFC to access your photos to select images for the e-paper display.",
+          "cameraPermission": "Allow GoodDisplay NFC to use your camera to take photos for the e-paper display."
         }
       ]
     ],
