@@ -53,7 +53,7 @@ export default function FlashScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>GoodDisplay ESL</Text>
-          <Text style={styles.subtitle}>2.13" E-Paper Tag Flasher</Text>
+          <Text style={styles.subtitle}>2.13&quot; E-Paper Tag Flasher</Text>
           <NfcStatusBadge
             supported={nfcSupported}
             enabled={nfcEnabled}
@@ -64,7 +64,9 @@ export default function FlashScreen() {
         {/* Display info */}
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>Target Display</Text>
-          <Text style={styles.infoLine}>GDN0213BW — 2.13" Black & White</Text>
+          <Text style={styles.infoLine}>
+            GDN0213BW — 2.13&quot; Black & White
+          </Text>
           <Text style={styles.infoLine}>Resolution: 122 × 250 px</Text>
           <Text style={styles.infoLine}>Protocol: NFC ISO 14443-A (FMSC)</Text>
         </View>

@@ -1,24 +1,24 @@
-import React from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
-import { TransferProgress } from '../types';
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { TransferProgress } from "../types";
 
 interface Props {
   progress: TransferProgress;
   visible: boolean;
 }
 
-const STAGE_COLORS: Record<TransferProgress['stage'], string> = {
-  init: '#4A90D9',
-  uploading: '#5BA35B',
-  refreshing: '#D4A017',
-  done: '#4CAF50',
-  error: '#E53935',
+const STAGE_COLORS: Record<TransferProgress["stage"], string> = {
+  init: "#4A90D9",
+  uploading: "#5BA35B",
+  refreshing: "#D4A017",
+  done: "#4CAF50",
+  error: "#E53935",
 };
 
 export function ProgressBar({ progress, visible }: Props) {
   if (!visible) return null;
 
-  const color = STAGE_COLORS[progress.stage] ?? '#4A90D9';
+  const color = STAGE_COLORS[progress.stage] ?? "#4A90D9";
 
   return (
     <View style={styles.container}>
@@ -43,34 +43,34 @@ export function ProgressBar({ progress, visible }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
+    width: "100%",
     paddingHorizontal: 4,
     gap: 8,
   },
   trackBg: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#2A2A2A',
-    overflow: 'hidden',
+    backgroundColor: "#2A2A2A",
+    overflow: "hidden",
   },
   fill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 4,
   },
   message: {
-    color: '#E0E0E0',
+    color: "#E0E0E0",
     fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
+    fontWeight: "500",
+    textAlign: "center",
   },
   sub: {
-    color: '#888',
+    color: "#888",
     fontSize: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   percent: {
-    color: '#555',
+    color: "#555",
     fontSize: 11,
-    textAlign: 'right',
+    textAlign: "right",
   },
 });

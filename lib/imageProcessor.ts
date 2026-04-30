@@ -14,9 +14,9 @@
  *      original color (pixels where hue is "red-ish" → red channel)
  */
 
-import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
-import { DisplayConfig, ProcessedImage } from '../types';
+import * as FileSystem from "expo-file-system";
+import * as ImageManipulator from "expo-image-manipulator";
+import { DisplayConfig, ProcessedImage } from "../types";
 
 // ─── Public Entry Point ───────────────────────────────────────────────────────
 
@@ -32,17 +32,24 @@ export async function processImageForDisplay(
   const resized = await resizeImage(sourceUri, config.width, config.height);
 
   // Step 3–5: Decode pixels and produce bitmaps
-  const pixels = await decodeImageToPixels(resized.uri, config.width, config.height);
+  const pixels = await decodeImageToPixels(
+    resized.uri,
+    config.width,
+    config.height,
+  );
 
   const blackBitmap = produceBlackBitmap(pixels, config.width, config.height);
 
   let redBitmap: Uint8Array | undefined;
-  if (config.color === 'bwr') {
+  if (config.color === "bwr") {
     redBitmap = produceRedBitmap(pixels, config.width, config.height);
   }
 
   // Clean up temp file
-  await FileSystem.deleteAsync(resized.uri, { idempotent: true });
+  const file = new FileSystem.File(resized.uri);
+  if (file.exists) {
+    file.delete();
+  }
 
   return { blackBitmap, redBitmap, width: config.width, height: config.height };
 }
@@ -54,22 +61,20 @@ async function resizeImage(
   targetWidth: number,
   targetHeight: number,
 ): Promise<ImageManipulator.ImageResult> {
-  return ImageManipulator.manipulateAsync(
-    uri,
-    [
-      {
-        resize: {
-          width: targetWidth,
-          height: targetHeight,
-        },
-      },
-    ],
-    {
-      compress: 1,
-      format: ImageManipulator.SaveFormat.PNG,
-      base64: false,
-    },
-  );
+  const context = ImageManipulator.ImageManipulator.manipulate(uri);
+
+  context.resize({
+    width: targetWidth,
+    height: targetHeight,
+  });
+
+  const result = await context.renderAsync();
+
+  return await result.saveAsync({
+    compress: 1,
+    format: ImageManipulator.SaveFormat.PNG,
+    base64: false,
+  });
 }
 
 // ─── Step 3: Decode pixels ────────────────────────────────────────────────────
@@ -89,38 +94,50 @@ interface PixelData {
   b: Uint8Array;
 }
 
+interface PixelData {
+  r: Uint8Array;
+  g: Uint8Array;
+  b: Uint8Array;
+}
+
 async function decodeImageToPixels(
   uri: string,
   width: number,
   height: number,
 ): Promise<PixelData> {
-  // Convert to raw base64 PNG using expo-image-manipulator
-  const result = await ImageManipulator.manipulateAsync(
-    uri,
-    [],
-    { format: ImageManipulator.SaveFormat.PNG, base64: true },
-  );
+  // Step 1: Resize + get base64 PNG
+  const context = ImageManipulator.ImageManipulator.manipulate(uri);
+
+  context.resize({ width, height });
+
+  const image = await context.renderAsync();
+
+  const result = await image.saveAsync({
+    format: ImageManipulator.SaveFormat.PNG,
+    base64: true,
+  });
 
   if (!result.base64) {
-    throw new Error('Failed to get base64 image data');
+    throw new Error("Failed to get base64 image data");
   }
 
-  // Decode the base64 PNG to extract RGBA pixels
-  // We implement a minimal PNG decoder that handles the common case
-  // (8-bit RGBA or RGB, deflate compressed IDAT)
+  // Step 2: Convert base64 → bytes
   const bytes = base64ToBytes(result.base64);
+
+  // Step 3: Decode PNG → RGB
   return parsePngPixels(bytes, width, height);
 }
 
 function base64ToBytes(b64: string): Uint8Array {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   const lookup = new Uint8Array(256);
   for (let i = 0; i < chars.length; i++) lookup[chars.charCodeAt(i)] = i;
 
   const len = b64.length;
   let bufLen = (len * 3) / 4;
-  if (b64[len - 1] === '=') bufLen--;
-  if (b64[len - 2] === '=') bufLen--;
+  if (b64[len - 1] === "=") bufLen--;
+  if (b64[len - 2] === "=") bufLen--;
 
   const out = new Uint8Array(bufLen);
   let p = 0;
@@ -144,11 +161,15 @@ function base64ToBytes(b64: string): Uint8Array {
  *
  * For production reliability, swap this with the `pngjs` npm package.
  */
-function parsePngPixels(bytes: Uint8Array, width: number, height: number): PixelData {
+function parsePngPixels(
+  bytes: Uint8Array,
+  width: number,
+  height: number,
+): PixelData {
   // Verify PNG signature
   const sig = [137, 80, 78, 71, 13, 10, 26, 10];
   for (let i = 0; i < 8; i++) {
-    if (bytes[i] !== sig[i]) throw new Error('Not a valid PNG file');
+    if (bytes[i] !== sig[i]) throw new Error("Not a valid PNG file");
   }
 
   // Parse IHDR
@@ -218,26 +239,35 @@ function isRedPixel(r: number, g: number, b: number): boolean {
   const min = Math.min(r, g, b);
   const delta = max - min;
   if (delta < 0.15 || max < 0.3) return false; // too dark or unsaturated
-  if (max !== r) return false;                  // red must be dominant
+  if (max !== r) return false; // red must be dominant
   const hue = 60 * (((g - b) / delta) % 6);
-  return hue < 30 || hue > 330;                 // red hue range
+  return hue < 30 || hue > 330; // red hue range
 }
 
 // ─── Grayscale Conversion ─────────────────────────────────────────────────────
 
-function toGrayscale(pixels: PixelData, width: number, height: number): Float32Array {
+function toGrayscale(
+  pixels: PixelData,
+  width: number,
+  height: number,
+): Float32Array {
   const total = width * height;
   const gray = new Float32Array(total);
   for (let i = 0; i < total; i++) {
     // Luminance formula (ITU-R BT.709)
-    gray[i] = 0.2126 * pixels.r[i] + 0.7152 * pixels.g[i] + 0.0722 * pixels.b[i];
+    gray[i] =
+      0.2126 * pixels.r[i] + 0.7152 * pixels.g[i] + 0.0722 * pixels.b[i];
   }
   return gray;
 }
 
 // ─── Floyd-Steinberg Dithering ────────────────────────────────────────────────
 
-function floydSteinberg(gray: Float32Array, width: number, height: number): Float32Array {
+function floydSteinberg(
+  gray: Float32Array,
+  width: number,
+  height: number,
+): Float32Array {
   const buf = new Float32Array(gray); // work on a copy
   const out = new Float32Array(width * height);
 
@@ -249,10 +279,11 @@ function floydSteinberg(gray: Float32Array, width: number, height: number): Floa
       out[idx] = newVal;
       const err = old - newVal;
 
-      if (x + 1 < width)              buf[idx + 1]         += err * (7 / 16);
-      if (y + 1 < height && x > 0)    buf[idx + width - 1] += err * (3 / 16);
-      if (y + 1 < height)             buf[idx + width]      += err * (5 / 16);
-      if (y + 1 < height && x + 1 < width) buf[idx + width + 1] += err * (1 / 16);
+      if (x + 1 < width) buf[idx + 1] += err * (7 / 16);
+      if (y + 1 < height && x > 0) buf[idx + width - 1] += err * (3 / 16);
+      if (y + 1 < height) buf[idx + width] += err * (5 / 16);
+      if (y + 1 < height && x + 1 < width)
+        buf[idx + width + 1] += err * (1 / 16);
     }
   }
   return out;
@@ -278,7 +309,7 @@ function packBits(
     if (invert) bit = 1 - bit;
     const byteIdx = Math.floor(i / 8);
     const bitIdx = 7 - (i % 8); // MSB first
-    if (bit) out[byteIdx] |= (1 << bitIdx);
+    if (bit) out[byteIdx] |= 1 << bitIdx;
   }
   return out;
 }

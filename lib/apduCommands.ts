@@ -9,7 +9,7 @@
  * wrapper path on iOS.
  */
 
-import { CLA, INS, IMAGE_PACKET_SIZE } from '../constants';
+import { CLA, IMAGE_PACKET_SIZE, INS } from "../constants";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -28,15 +28,15 @@ function hex(s: string): number[] {
  * Must be called first in every NFC session (iOS NDEF path).
  */
 export function buildSelectNdefApp(): number[] {
-  const aid = [0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01, 0x00];
+  const aid = [0xd2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01, 0x00];
   return [
-    0x00,        // CLA
-    0xA4,        // INS: SELECT
-    0x04,        // P1: select by AID
-    0x00,        // P2
-    aid.length,  // Lc
+    0x00, // CLA
+    0xa4, // INS: SELECT
+    0x04, // P1: select by AID
+    0x00, // P2
+    aid.length, // Lc
     ...aid,
-    0x00,        // Le
+    0x00, // Le
   ];
 }
 
@@ -61,7 +61,7 @@ export function buildVerifyPin(pin: number[]): number[] {
     CLA.STANDARD,
     INS.VERIFY_PIN,
     0x00,
-    0x01,       // P2 = 0x01: USER PIN
+    0x01, // P2 = 0x01: USER PIN
     pin.length,
     ...pin,
   ];
@@ -100,10 +100,10 @@ export function buildSetScreenType(
   // Command 2: color control params (P1=0x00, P2=0x01, Lc=0x03)
   // For BW: Data = [0x1B, 0x00, 0x30]  → single image, 2-color, black=00 white=10
   // For BWR: Data = [0x2B, 0x00, 0x30, 0x48] → double image, 3-color
-  const isBWR = colorByte === '30' || colorByte === '31';
+  const isBWR = colorByte === "30" || colorByte === "31";
   const colorControlData = isBWR
-    ? [0x2B, 0x00, 0x30, 0x48] // double image: black=00, white=10, red=01
-    : [0x1B, 0x00, 0x30];      // single image: black=00, white=10
+    ? [0x2b, 0x00, 0x30, 0x48] // double image: black=00, white=10, red=01
+    : [0x1b, 0x00, 0x30]; // single image: black=00, white=10
 
   const cmd2 = [
     CLA.PROPRIETARY,
@@ -126,7 +126,7 @@ export function buildSetScreenType(
  * P1=0x02 to clear the current driver before re-downloading.
  */
 export function buildSetDriverFlow(tlvData: number[]): number[][] {
-  const MAX_CHUNK = 0xFF;
+  const MAX_CHUNK = 0xff;
   const commands: number[][] = [];
 
   if (tlvData.length === 0) {
@@ -170,8 +170,8 @@ export function buildLoadImageCommands(
     commands.push([
       CLA.PROPRIETARY,
       INS.LOAD_IMAGE,
-      imageIndex,   // P1: image index
-      packetSeq,    // P2: packet sequence number
+      imageIndex, // P1: image index
+      packetSeq, // P2: packet sequence number
       chunk.length, // Lc
       ...chunk,
     ]);
@@ -196,15 +196,15 @@ export function buildRedrawScreen(
 ): number[] {
   // P2: Bit7 = refresh mode, Bit6-0 = image index
   const p2 = waitMode
-    ? (imageIndex & 0x7F)          // bit7=0 → wait mode
-    : (0x80 | (imageIndex & 0x7F)); // bit7=1 → immediate return
+    ? imageIndex & 0x7f // bit7=0 → wait mode
+    : 0x80 | (imageIndex & 0x7f); // bit7=1 → immediate return
   return [
     CLA.PROPRIETARY,
     INS.REDRAW_SCREEN,
     powerDelay, // P1
-    p2,         // P2
+    p2, // P2
     // No Lc/Data
-    0x00,       // Le
+    0x00, // Le
   ];
 }
 
@@ -250,7 +250,7 @@ export function parseApduResponse(raw: number[]): {
   success: boolean;
 } {
   if (raw.length < 2) {
-    return { data: [], sw1: 0x6F, sw2: 0x00, success: false };
+    return { data: [], sw1: 0x6f, sw2: 0x00, success: false };
   }
   const sw1 = raw[raw.length - 2];
   const sw2 = raw[raw.length - 1];
